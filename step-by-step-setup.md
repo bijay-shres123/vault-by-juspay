@@ -125,6 +125,19 @@ cert.pem key.pem > identity.pem
 
 Adjust paths in `config.toml` accordingly
 
+**Generate master key
+
+The vault includes a utility to create a master key (and optionally only the master key):
+
+# Only master key without custodians
+```bash
+cargo run --bin utils -- master-key -w
+```
+
+# Full key bundle (master + custodians)
+```bash
+cargo run --bin utils -- master-key
+```
 ## 7. Configuration
 
 1. **Create a config.tom file inside the config foler:**
