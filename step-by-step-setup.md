@@ -313,7 +313,7 @@ Start the card vault service with your custom configuration.
 
 Run the application:
 ```bash
-cargo run --features dev -- config/config.toml
+cargo run --bin locker --release -- config/config.toml
 ```
 
 You should see log output indicating:
@@ -405,8 +405,9 @@ chmod +x generate_payload.py
 Generate and send a test payload to store card data:
 ```bash
 python3 generate_payload.py > test_payload.json
-curl -X POST http://127.0.0.1:8080/v1/card \
+curl -X POST http://127.0.0.1:8080/data/add \
      -H "Content-Type: application/json" \
+     -H "x-tenant-id: public" \
      -d @test_payload.json
 ```
 
