@@ -313,7 +313,7 @@ Start the card vault service with your custom configuration.
 
 Run the application:
 ```bash
-cargo run --features dev -- config/config.toml
+cargo run --bin locker --release -- config/config.toml
 ```
 
 You should see log output indicating:
