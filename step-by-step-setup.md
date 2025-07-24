@@ -313,7 +313,7 @@ Start the card vault service with your custom configuration.
 
 Run the application:
 ```bash
-cargo run --bin locker --release -- config/config.toml
+cargo run --features dev -- config/config.toml
 ```
 
 You should see log output indicating:
@@ -400,18 +400,101 @@ EOF
 chmod +x generate_payload.py
 ```
 
-### 13.3 API Testing
+### 13.3 Creating Card Data
 
-Generate and send a test payload:
+Generate and send a test payload to store card data:
 ```bash
 python3 generate_payload.py > test_payload.json
 curl -X POST http://127.0.0.1:8080/v1/card \
      -H "Content-Type: application/json" \
-     -H "x-tenant-id: public" \
      -d @test_payload.json
 ```
 
-A successful response will return a token that can be used to retrieve the stored card data.
+A successful response will return a card reference token that can be used to retrieve the stored card data later.
+
+### 13.4 Retrieving Card Data
+
+To retrieve previously stored card data, you will need the card reference received from the card creation response. Use the following API call:
+
+```bash
+curl -X POST http://127.0.0.1:8080/data/retrieve \
+     -H "Content-Type: application/json" \
+     -H "x-tenant-id: public" \
+     -d '{
+       "merchant_id": "test_merchant",
+       "merchant_customer_id": "cust_123",
+       "card_reference": "<reference_id_received_after_card_add>"
+     }'
+```
+
+Replace `<reference_id_received_after_card_add>` with the actual card reference token returned from the card creation API.
+
+### 13.5 Decoding Encrypted Responses
+
+The retrieve API returns encrypted card data that must be decrypted using the appropriate keys. Create a decoding utility to process these responses:
+
+```bash
+cat > decode_payload.py << 'EOF'
+#!/usr/bin/env python3
+from jose import jwe, jws
+import json
+import sys
+
+def decode_encrypted_response(encrypted_response):
+    # Read keys (update paths to match your installation)
+    try:
+        with open('locker-private-key.pem', 'r') as f:
+            locker_private_key = f.read()
+        with open('tenant-public-key.pem', 'r') as f:
+            tenant_public_key = f.read()
+    except FileNotFoundError as e:
+        print(f"Error reading key files: {e}")
+        sys.exit(1)
+
+    # Step 1: Verify JWS signature and extract JWE token
+    try:
+        jwe_token = jws.verify(encrypted_response, tenant_public_key, algorithms=['RS256'])
+    except Exception as e:
+        print(f"JWS verification failed: {e}")
+        sys.exit(1)
+
+    # Step 2: Decrypt the JWE token
+    try:
+        decrypted_data = jwe.decrypt(jwe_token, locker_private_key)
+    except Exception as e:
+        print(f"JWE decryption failed: {e}")
+        sys.exit(1)
+
+    # Step 3: Parse and return the JSON result
+    try:
+        result = json.loads(decrypted_data)
+        return json.dumps(result, indent=2)
+    except json.JSONDecodeError as e:
+        print(f"JSON parsing failed: {e}")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python3 decode_payload.py '<encrypted_response>'")
+        print("Replace <encrypted_response> with the actual encrypted response from the API")
+        sys.exit(1)
+    
+    encrypted_response = sys.argv[1]
+    decoded_result = decode_encrypted_response(encrypted_response)
+    print("Decoded card data:")
+    print(decoded_result)
+EOF
+
+chmod +x decode_payload.py
+```
+
+To use the decoding utility with an API response:
+```bash
+# Replace <encrypted_response_string> with the actual encrypted response from the retrieve API
+python3 decode_payload.py '<encrypted_response_string>'
+```
+
+This will output the decrypted card data in a readable JSON format, allowing you to verify that the encryption and decryption process is working correctly.
 
 ## 14. Troubleshooting & Tips
 
@@ -441,3 +524,5 @@ Common issues and their solutions:
 - Verify key file permissions and ownership
 
 For additional debugging, enable verbose logging by setting the `RUST_LOG` environment variable to `debug` or `trace` level.
+
+---
