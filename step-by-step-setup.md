@@ -223,6 +223,94 @@ cargo run -- --config config/config.toml
 
 You should see output indicating the server has started on port 8080.
 
+### 11.1 Payload Generation & Testing
+
+Create a helper script `generate_payload.py` to encrypt and sign card data before sending to the vault:
+
+```python
+# generate_payload.py
+from jose import jwe, jws
+import json
+
+# Read keys
+with open('config/jwe_public.pem', 'r') as f:
+    locker_public_key = f.read()
+with open('config/jws_private.pem', 'r') as f:
+    tenant_private_key = f.read()
+
+# Step 1: Encrypt the actual sensitive data
+sensitive_data = {
+    "card_number": "4111111111111111",
+    "name_on_card": "John Doe",
+    "card_exp_month": "12",
+    "card_exp_year": "2026"
+}
+
+jwe_token = jwe.encrypt(
+    plaintext=json.dumps(sensitive_data),
+    key=locker_public_key,
+    algorithm='RSA-OAEP-256',
+    encryption='A256GCM'
+)
+
+# Step 2: Sign the JWE payload
+jws_token = jws.sign(jwe_token, tenant_private_key, algorithm='RS256')
+
+# Step 3: Final payload
+payload = {
+    "merchant_id": "test_merchant",
+    "merchant_customer_id": "cust_123",
+    "enc_card_data": jws_token,
+    "ttl": 3600
+}
+
+print(json.dumps(payload, indent=2))
+```
+
+Run it to produce the JSON payload, then send it:
+
+```bash
+python3 generate_payload.py > payload.json
+curl -X POST http://127.0.0.1:8080/v1/card \
+     -H "Content-Type: application/json" \
+     -d @payload.json
+```
+
+### 11.2 Payload Decryption & Verification
+
+Use `decode_payload.py` to verify and decrypt responses (e.g., when retrieving card data):
+
+```python
+# decode_payload.py
+from jose import jwe, jws
+import json
+
+# Read keys
+with open('config/jwe_private.pem', 'r') as f:
+    locker_private_key = f.read()
+with open('config/jws_public.pem', 'r') as f:
+    tenant_public_key = f.read()
+
+# Your encrypted response from the API
+encrypted_response = "<API_RESPONSE_JWS_STRING>"
+
+# Step 1: Verify and extract the JWE token from JWS
+jwe_token = jws.verify(encrypted_response, tenant_public_key, algorithms=['RS256'])
+
+# Step 2: Decrypt the JWE token
+decrypted_data = jwe.decrypt(jwe_token, locker_private_key)
+
+# Step 3: Parse the JSON
+result = json.loads(decrypted_data)
+print(json.dumps(result, indent=2))
+```
+
+Replace `<API_RESPONSE_JWS_STRING>` with the actual response and run:
+
+```bash
+python3 decode_payload.py
+```
+
 ## 11. Testing the APIs
 
 Use `curl` to verify basic endpoints:
@@ -234,6 +322,7 @@ curl http://127.0.0.1:8080/health
 # Create a vault entry (replace with proper JSON)
 curl -X POST http://127.0.0.1:8080/v1/card -H "Content-Type: application/json" -d '{"number":"4111111111111111","expiry_month":12,"expiry_year":2025}'
 ```
+
 
 ## 12. Troubleshooting & Tips
 
