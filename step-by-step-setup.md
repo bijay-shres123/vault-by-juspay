@@ -106,6 +106,24 @@ git clone https://github.com/juspay/hyperswitch-card-vault.git
 cd hyperswitch-card-vault
 git checkout main
 ```
+## Generate identity.pem
+
+generate identity:
+```bash
+openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+
+cert.pem key.pem > identity.pem
+```
+**Generate sample keys (development):**
+
+   ```bash
+      openssl genrsa -out locker-private-key.pem 2048
+      openssl genrsa -out tenant-private-key.pem 2048
+      openssl rsa -in locker-private-key.pem -pubout -out locker-public-key.pem
+      openssl rsa -in tenant-private-key.pem -pubout -out tenant-public-key.pem
+   ```
+
+Adjust paths in `config.toml` accordingly
 
 ## 7. Configuration
 
@@ -164,29 +182,7 @@ git checkout main
      ```
    * Under `[encryption]`, provide paths or base64 strings for JWE/JWS keys.
 
-3. **Generate sample keys (development):**
 
-   ```bash
-   # JWE RSA key pair
-   openssl genpkey -algorithm RSA -out config/jwe_private.pem -pkeyopt rsa_keygen_bits:2048
-   openssl rsa -in config/jwe_private.pem -pubout -out config/jwe_public.pem
-
-   # JWS RSA key pair
-   openssl genpkey -algorithm RSA -out config/jws_private.pem -pkeyopt rsa_keygen_bits:2048
-   openssl rsa -in config/jws_private.pem -pubout -out config/jws_public.pem
-   ```
-
-Adjust paths in `config.toml` accordingly:
-
-```toml
-[jwe]
-private_key_path = "path-to-private-key-from-root/jwe_private.pem"
-public_key_path  = "path-to-public-key-from-root/jwe_public.pem"
-
-[jws]
-private_key_path = "path-to-private-key-from-root/jws_private.pem"
-public_key_path  = "path-to-public-key-from-root/jws_public.pem"
-```
 
 ## 8. Database Migrations
 
