@@ -182,7 +182,57 @@ Adjust paths in `config.toml` accordingly
      ```
    * Under `[encryption]`, provide paths or base64 strings for JWE/JWS keys.
 
+Also edit src/bin/locker.rs for rust to accept custom config from config/config.toml
+```bash
+vi src/bin/locker.rs
+```
+```bash
+src/bin/locker.rs 
+use tartarus::{logger, tenant::GlobalAppState};
+use std::{env, path::PathBuf};
 
+#[allow(clippy::expect_used)]
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if cfg!(feature = "dev") {
+        eprintln!("This is a dev build, not for production use");
+    }
+
+    // 🛠️ Get config path from CLI or default
+    let args: Vec<String> = env::args().collect();
+    let config_path = args.get(1).map(|s| PathBuf::from(s)).unwrap_or_else(|| PathBuf::from("config/config.toml"));
+
+    println!("Loading config from: {}", config_path.display());
+
+    // ✅ Use new_with_config_path
+    let mut global_config =
+        tartarus::config::GlobalConfig::new_with_config_path(Some(config_path))
+        .expect("Failed while parsing config");
+
+    let _guard = logger::setup(
+        &global_config.log,
+        tartarus::service_name!(),
+        [tartarus::service_name!(), "tower_http"],
+    );
+
+    global_config
+        .validate()
+        .expect("Failed to validate application configuration");
+
+    global_config
+        .fetch_raw_secrets()
+        .await
+        .expect("Failed to fetch raw application secrets");
+
+    let global_app_state = GlobalAppState::new(global_config).await;
+
+    tartarus::app::server_builder(global_app_state)
+        .await
+        .expect("Failed while building the server");
+
+    Ok(())
+}
+```
 
 ## 8. Database Migrations
 
