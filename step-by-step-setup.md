@@ -114,43 +114,44 @@ git checkout main
    ```bash
    vi config/config.tom
    ```
+
    ```bash
-  [log.console]
-enabled = true
-level = "DEBUG"
-log_format = "default"
-
-[server]
-host = "0.0.0.0"
-port = 8080
-
-[limit]
-request_count = 1
-duration = 60
-
-[database]
-username = "vault_dev"
-password = "vault_pass"
-host = "localhost"
-port = 5432
-dbname = "vault_dev"
-
-[cache]
-tti = 7200 # i.e. 2 hours
-max_capacity = 5000
-
-[secrets]
-locker_private_key = "/root/git_hyper/hyperswitch-card-vault/locker-private-key.pem"
-
-[tenant_secrets]
-public = { master_key = "<your master key>", schema = "public" }
-[external_key_manager]
-url = ""
-cert= ""
-
-[api_client]
-identity = "/root/git_hyper/hyperswitch-card-vault/identity.pem"
-pool_max_idle_per_host = 10
+      [log.console]
+      enabled = true
+      level = "DEBUG"
+      log_format = "default"
+      
+      [server]
+      host = "0.0.0.0"
+      port = 8080
+      
+      [limit]
+      request_count = 1
+      duration = 60
+      
+      [database]
+      username = "vault_dev"
+      password = "vault_pass"
+      host = "localhost"
+      port = 5432
+      dbname = "vault_dev"
+      
+      [cache]
+      tti = 7200 # i.e. 2 hours
+      max_capacity = 5000
+      
+      [secrets]
+      locker_private_key = "/root/git_hyper/hyperswitch-card-vault/locker-private-key.pem"
+      
+      [tenant_secrets]
+      public = { master_key = "<your master key>", schema = "public" }
+      [external_key_manager]
+      url = ""
+      cert= ""
+      
+      [api_client]
+      identity = "/root/git_hyper/hyperswitch-card-vault/identity.pem"
+      pool_max_idle_per_host = 10
    ```
 
 2. **Edit `config/config.toml`:**
